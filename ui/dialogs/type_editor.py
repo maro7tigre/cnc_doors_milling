@@ -270,8 +270,12 @@ class TypeEditor(QDialog):
         
         # Check for name conflicts
         if self.main_window:
-            existing_types = (self.main_window.hinges_types if self.profile_type == "hinge" 
-                            else self.main_window.locks_types)
+            if self.profile_type == "hinge":
+                existing_types = self.main_window.hinges_types
+            elif self.profile_type == "lock":
+                existing_types = self.main_window.locks_types
+            else:
+                existing_types = self.main_window.barrels_types
             
             # Allow same name if editing the same type
             if name in existing_types and (not self.is_editing or name != self.original_name):
@@ -303,14 +307,18 @@ class TypeEditor(QDialog):
         if self.is_editing and self.original_name and self.original_name != name:
             if self.profile_type == "hinge":
                 self.main_window.update_hinge_type(self.original_name, None)
-            else:
+            elif self.profile_type == "lock":
                 self.main_window.update_lock_type(self.original_name, None)
-        
+            else:
+                self.main_window.update_barrel_type(self.original_name, None)
+
         # Save new/updated type
         if self.profile_type == "hinge":
             self.main_window.update_hinge_type(name, type_data)
-        else:
+        elif self.profile_type == "lock":
             self.main_window.update_lock_type(name, type_data)
+        else:
+            self.main_window.update_barrel_type(name, type_data)
     
     def find_main_window(self, parent):
         """Find main_window from parent hierarchy"""

@@ -149,8 +149,10 @@ class TypeSelector(QWidget):
             if self.main_window:
                 if self.profile_type == "hinge":
                     current_data = self.main_window.hinges_types.get(name, {}).copy()
-                else:
+                elif self.profile_type == "lock":
                     current_data = self.main_window.locks_types.get(name, {}).copy()
+                else:
+                    current_data = self.main_window.barrels_types.get(name, {}).copy()
             else:
                 current_data = self.types[name].copy()
             
@@ -167,17 +169,21 @@ class TypeSelector(QWidget):
             if self.main_window:
                 if self.profile_type == "hinge":
                     current_data = self.main_window.hinges_types.get(name, {}).copy()
-                else:
+                elif self.profile_type == "lock":
                     current_data = self.main_window.locks_types.get(name, {}).copy()
+                else:
+                    current_data = self.main_window.barrels_types.get(name, {}).copy()
             else:
                 current_data = self.types[name].copy()
-            
+
             # Find unique name - also check main_window for latest data
             if self.main_window:
                 if self.profile_type == "hinge":
                     existing_names = set(self.main_window.hinges_types.keys())
-                else:
+                elif self.profile_type == "lock":
                     existing_names = set(self.main_window.locks_types.keys())
+                else:
+                    existing_names = set(self.main_window.barrels_types.keys())
             else:
                 existing_names = set(self.types.keys())
             
@@ -213,8 +219,10 @@ class TypeSelector(QWidget):
             # Delete from main_window
             if self.profile_type == "hinge":
                 self.main_window.update_hinge_type(name, None)
-            else:
+            elif self.profile_type == "lock":
                 self.main_window.update_lock_type(name, None)
+            else:
+                self.main_window.update_barrel_type(name, None)
             
             # Refresh from main_window after deletion
             self.refresh_from_main_window()
@@ -229,8 +237,10 @@ class TypeSelector(QWidget):
         # Get updated types from main_window
         if self.profile_type == "hinge":
             types_data = self.main_window.hinges_types
-        else:
+        elif self.profile_type == "lock":
             types_data = self.main_window.locks_types
+        else:
+            types_data = self.main_window.barrels_types
         
         self.load_types(types_data)
     

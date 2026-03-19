@@ -219,13 +219,15 @@ class ProfileEditor(QDialog):
         """Handle profile updates from main_window - refresh type selector"""
         if not self.main_window:
             return
-        
+
         # Update type selector with latest data from main_window
         if self.profile_type == "hinge":
             types_data = self.main_window.hinges_types
-        else:
+        elif self.profile_type == "lock":
             types_data = self.main_window.locks_types
-        
+        else:
+            types_data = self.main_window.barrels_types
+
         self.type_selector.load_types(types_data)
         
         # Reselect current type if it still exists
@@ -241,8 +243,10 @@ class ProfileEditor(QDialog):
         # Load types from main_window
         if self.profile_type == "hinge":
             types_data = self.main_window.hinges_types
-        else:
+        elif self.profile_type == "lock":
             types_data = self.main_window.locks_types
+        else:
+            types_data = self.main_window.barrels_types
         
         self.type_selector.load_types(types_data)
         
@@ -356,8 +360,12 @@ class ProfileEditor(QDialog):
         
         # Check for name conflicts
         if self.main_window:
-            existing_profiles = (self.main_window.hinges_profiles if self.profile_type == "hinge" 
-                               else self.main_window.locks_profiles)
+            if self.profile_type == "hinge":
+                existing_profiles = self.main_window.hinges_profiles
+            elif self.profile_type == "lock":
+                existing_profiles = self.main_window.locks_profiles
+            else:
+                existing_profiles = self.main_window.barrels_profiles
             
             # Allow same name if editing the same profile
             if name in existing_profiles and (not self.is_editing or name != self.original_name):
@@ -389,14 +397,18 @@ class ProfileEditor(QDialog):
         if self.is_editing and self.original_name and self.original_name != name:
             if self.profile_type == "hinge":
                 self.main_window.update_hinge_profile(self.original_name, None)
-            else:
+            elif self.profile_type == "lock":
                 self.main_window.update_lock_profile(self.original_name, None)
-        
+            else:
+                self.main_window.update_barrel_profile(self.original_name, None)
+
         # Save new/updated profile
         if self.profile_type == "hinge":
             self.main_window.update_hinge_profile(name, profile_data)
-        else:
+        elif self.profile_type == "lock":
             self.main_window.update_lock_profile(name, profile_data)
+        else:
+            self.main_window.update_barrel_profile(name, profile_data)
     
     def find_main_window(self, parent):
         """Find main_window from parent hierarchy"""
