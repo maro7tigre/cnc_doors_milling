@@ -1,6 +1,8 @@
-# cnc_frames_milling
+# cnc_doors_milling
 
-A PySide6 application for generating CNC G-code files for door frame manufacturing. The application provides an intuitive interface for configuring frame dimensions, selecting hinge and lock profiles, and generating customized G-code files with automatic variable replacement.
+> **Work in Progress** — This project is being adapted from [cnc_frames_milling](https://github.com/maro7tigre/cnc_frames_milling) (door frame milling) and repurposed specifically for doors. The codebase currently reflects the original frames project; door-specific changes are yet to be made.
+
+A PySide6 application for generating CNC G-code files for **door** manufacturing. The application provides an intuitive interface for configuring door dimensions, selecting hinge and lock profiles, and generating customized G-code files with automatic variable replacement.
 
 ![License](https://img.shields.io/badge/license-GPLv3-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.8%2B-blue)
