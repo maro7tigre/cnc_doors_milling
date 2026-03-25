@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import QMainWindow, QTabWidget, QVBoxLayout, QWidget, QInputDialog, QMessageBox, QFileDialog
 from PySide6.QtCore import Qt, QSettings, QObject, Signal
 from .profile.profile_tab import ProfileTab
-from .frame.frame_tab import FrameTab
+from .door.setup_tab import SetupTab
 from .generate.generate_tab import GenerateTab
 import json
 import os
@@ -103,9 +103,10 @@ class MainWindow(QMainWindow):
             "machine_y_offset": 0,
             "machine_z_offset": 0,
 
-            # Hinge configuration - shared Z position
+            # Hinge configuration - shared Z position and X auto
             "hinge_z_position": 20,
             "hinge_z_auto": 1,
+            "hinge_x_auto": 1,
 
             # Hinges 1-10 - individual X positions along door height
             "hinge1_active": 1,
@@ -150,7 +151,7 @@ class MainWindow(QMainWindow):
             "barrel_active": 1,
             "barrel_x_position": 1050,
             "barrel_x_auto": 1,
-            "barrel_y_position": 20,
+            "barrel_y_position": 50,
             "barrel_y_auto": 1,
 
             # Door orientation
@@ -205,7 +206,7 @@ class MainWindow(QMainWindow):
 
         # Create tabs
         self.profile_tab = ProfileTab(self)
-        self.frame_tab = FrameTab(self)
+        self.frame_tab = SetupTab(self)
         self.generate_tab = GenerateTab(self)
 
         # Add tabs

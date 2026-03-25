@@ -4,6 +4,6 @@ Frame Package
 Frame configuration components for the CNC Frame Wizard application.
 """
 
-from .frame_tab import FrameTab
+from .setup_tab import SetupTab
 
-__all__ = ['FrameTab']
+__all__ = ['SetupTab']

@@ -119,21 +119,6 @@ class FramePreview(QWidget):
             painter, lock_depth_x, start_y, depth_px, door_h_px, scale
         )
 
-        # ── Labels below each panel ────────────────────────────────────────
-        label_y = int(start_y + door_h_px + 14)
-        painter.setFont(QFont("Arial", 7))
-        painter.setPen(QColor(120, 130, 160))
-
-        hinge_label = "Hinge side"
-        lock_label = "Lock side"
-        face_label = "Front"
-
-        painter.drawText(int(hinge_depth_x), label_y, int(depth_px), 14,
-                         Qt.AlignCenter, hinge_label)
-        painter.drawText(int(face_x), label_y, int(face_w_px), 14,
-                         Qt.AlignCenter, face_label)
-        painter.drawText(int(lock_depth_x), label_y, int(depth_px), 14,
-                         Qt.AlignCenter, lock_label)
 
     # ── Panel drawing helpers ─────────────────────────────────────────────
 
@@ -150,7 +135,8 @@ class FramePreview(QWidget):
 
         hinge_h_px = max(6, scale * 60)
         hinge_w_px = max(5, w * 0.6)
-        hinge_x_center = x + w / 2
+        z_clamped = max(0, min(self.hinge_z_position, self.door_depth))
+        hinge_x_center = x + z_clamped * scale
 
         for i, (x_pos, active) in enumerate(zip(self.hinge_x_positions, self.hinge_active)):
             if not active or x_pos <= 0:
@@ -171,21 +157,12 @@ class FramePreview(QWidget):
                              int(hy + hinge_h_px * 0.15), f"H{i+1}")
             painter.setPen(QPen(QColor(30, 80, 160), 1))
 
-        # Show hinge Z position as a thin vertical line in the strip
-        if self.hinge_z_position > 0 and self.hinge_z_position <= self.door_depth:
-            z_px = x + self.hinge_z_position * scale
-            painter.setPen(QPen(QColor(70, 130, 220, 160), 1, Qt.DashLine))
-            painter.drawLine(int(z_px), int(y), int(z_px), int(y + h))
-            painter.setPen(QPen(QColor(80, 50, 20), 1))
-
     def _draw_depth_strip_lock(self, painter, x, y, w, h, scale):
         """Draw the lock-side depth strip (depth × height) — lock only."""
         # Door body
         painter.setBrush(QBrush(QColor(139, 90, 43)))
         painter.setPen(QPen(QColor(80, 50, 20), 1))
         painter.drawRect(int(x), int(y), int(w), int(h))
-
-        center_x = x + w / 2
 
         # Draw lock
         if self.lock_active and 0 < self.lock_x_position <= self.door_height:
@@ -194,7 +171,9 @@ class FramePreview(QWidget):
 
             lock_h_px = max(8, scale * 120)
             lock_w_px = max(5, w * 0.6)
-            ly = y + self.lock_x_position * scale
+            ly = y + (self.door_height - self.lock_x_position) * scale
+            z_clamped = max(0, min(self.lock_z_position, self.door_depth))
+            center_x = x + z_clamped * scale
 
             painter.drawRect(
                 int(center_x - lock_w_px / 2),
@@ -208,13 +187,6 @@ class FramePreview(QWidget):
                              int(ly + lock_h_px * 0.15), "L")
             painter.setPen(QPen(QColor(20, 120, 40), 1))
 
-            # Lock Z depth marker (dashed line)
-            if 0 < self.lock_z_position <= self.door_depth:
-                z_px = x + self.lock_z_position * scale
-                painter.setPen(QPen(QColor(50, 200, 80, 160), 1, Qt.DashLine))
-                painter.drawLine(int(z_px), int(y), int(z_px), int(y + h))
-                painter.setPen(QPen(QColor(80, 50, 20), 1))
-
     def _draw_face(self, painter, x, y, w, h, depth_px, scale):
         """Draw the door front face — barrel only (hinges/lock are on the side strips)."""
         # Door body
@@ -222,28 +194,12 @@ class FramePreview(QWidget):
         painter.setPen(QPen(QColor(80, 50, 20), 2))
         painter.drawRect(int(x), int(y), int(w), int(h))
 
-        # Subtle edge tint to show hinge/lock sides
-        edge_w = max(4, w * 0.025)
-        if self.orientation == "right":
-            hinge_edge_x = x + w - edge_w
-            lock_edge_x = x
-        else:
-            hinge_edge_x = x
-            lock_edge_x = x + w - edge_w
-
-        painter.setBrush(QBrush(QColor(100, 65, 20)))
-        painter.setPen(Qt.NoPen)
-        painter.drawRect(int(hinge_edge_x), int(y), int(edge_w), int(h))
-
-        painter.setBrush(QBrush(QColor(120, 75, 25)))
-        painter.drawRect(int(lock_edge_x), int(y), int(edge_w), int(h))
-
         # Barrel — shown on the front face as a circle
         if self.barrel_active and 0 < self.barrel_x_position < self.door_height:
             painter.setBrush(QBrush(QColor(220, 160, 40)))
             painter.setPen(QPen(QColor(140, 100, 20), 1))
 
-            by = y + self.barrel_x_position * scale
+            by = y + (self.door_height - self.barrel_x_position) * scale
             barrel_r = max(5, scale * 18)
             # barrel_y_position = distance from the lock edge across the door width
             if self.orientation == "right":

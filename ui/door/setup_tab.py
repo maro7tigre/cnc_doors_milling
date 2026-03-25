@@ -19,7 +19,7 @@ from .widgets.frame_preview import FramePreview
 from .widgets.order_widget import OrderWidget
 
 
-class FrameTab(QWidget):
+class SetupTab(QWidget):
     """Door configuration tab"""
     back_clicked = Signal()
     next_clicked = Signal()
@@ -109,6 +109,62 @@ class FrameTab(QWidget):
 
         layout.addWidget(door_group)
 
+        # --- Lock Configuration ---
+        lock_group = ThemedGroupBox("Lock Configuration")
+        lock_layout = QVBoxLayout()
+        lock_group.setLayout(lock_layout)
+
+        self.lock_active_check = SimpleDollarCheckBox("lock_active", "Active", self)
+        lock_layout.addWidget(self.lock_active_check)
+
+        lock_x_layout = QHBoxLayout()
+        self.lock_x_auto_check = SimpleDollarCheckBox("lock_x_auto", "Auto", self)
+        lock_x_layout.addWidget(self.lock_x_auto_check)
+        lock_x_layout.addWidget(ThemedLabel("X:"))
+        self.lock_x_input = SimpleDollarLineEdit("lock_x_position", self)
+        self.lock_x_input.setValidator(QDoubleValidator(0, self.MAX_DOOR_HEIGHT, 2))
+        lock_x_layout.addWidget(self.lock_x_input)
+        lock_layout.addLayout(lock_x_layout)
+
+        lock_z_layout = QHBoxLayout()
+        self.lock_z_auto_check = SimpleDollarCheckBox("lock_z_auto", "Auto", self)
+        lock_z_layout.addWidget(self.lock_z_auto_check)
+        lock_z_layout.addWidget(ThemedLabel("Z:"))
+        self.lock_z_input = SimpleDollarLineEdit("lock_z_position", self)
+        self.lock_z_input.setValidator(QDoubleValidator(0, 500, 2))
+        lock_z_layout.addWidget(self.lock_z_input)
+        lock_layout.addLayout(lock_z_layout)
+
+        layout.addWidget(lock_group)
+
+        # --- Barrel Configuration ---
+        barrel_group = ThemedGroupBox("Barrel Configuration")
+        barrel_layout = QVBoxLayout()
+        barrel_group.setLayout(barrel_layout)
+
+        self.barrel_active_check = SimpleDollarCheckBox("barrel_active", "Active", self)
+        barrel_layout.addWidget(self.barrel_active_check)
+
+        barrel_x_layout = QHBoxLayout()
+        self.barrel_x_auto_check = SimpleDollarCheckBox("barrel_x_auto", "Auto", self)
+        barrel_x_layout.addWidget(self.barrel_x_auto_check)
+        barrel_x_layout.addWidget(ThemedLabel("X:"))
+        self.barrel_x_input = SimpleDollarLineEdit("barrel_x_position", self)
+        self.barrel_x_input.setValidator(QDoubleValidator(0, self.MAX_DOOR_HEIGHT, 2))
+        barrel_x_layout.addWidget(self.barrel_x_input)
+        barrel_layout.addLayout(barrel_x_layout)
+
+        barrel_y_layout = QHBoxLayout()
+        self.barrel_y_auto_check = SimpleDollarCheckBox("barrel_y_auto", "Auto", self)
+        barrel_y_layout.addWidget(self.barrel_y_auto_check)
+        barrel_y_layout.addWidget(ThemedLabel("Y:"))
+        self.barrel_y_input = SimpleDollarLineEdit("barrel_y_position", self)
+        self.barrel_y_input.setValidator(QDoubleValidator(0, 500, 2))
+        barrel_y_layout.addWidget(self.barrel_y_input)
+        barrel_layout.addLayout(barrel_y_layout)
+
+        layout.addWidget(barrel_group)
+
         # Parameter preview
         preview_group = ThemedGroupBox("Parameter Preview")
         preview_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
@@ -166,70 +222,9 @@ class FrameTab(QWidget):
         return widget
 
     def create_right_panel(self):
-        """Create right panel with lock, barrel, and hinge configuration"""
+        """Create right panel with hinge configuration"""
         widget = QWidget()
         layout = QVBoxLayout(widget)
-
-        # --- Lock Configuration ---
-        lock_group = ThemedGroupBox("Lock Configuration")
-        lock_layout = QVBoxLayout()
-        lock_group.setLayout(lock_layout)
-
-        # Active checkbox
-        self.lock_active_check = SimpleDollarCheckBox("lock_active", "Active", self)
-        lock_layout.addWidget(self.lock_active_check)
-
-        # X position row
-        lock_x_layout = QHBoxLayout()
-        self.lock_x_auto_check = SimpleDollarCheckBox("lock_x_auto", "Auto", self)
-        lock_x_layout.addWidget(self.lock_x_auto_check)
-        lock_x_layout.addWidget(ThemedLabel("X:"))
-        self.lock_x_input = SimpleDollarLineEdit("lock_x_position", self)
-        self.lock_x_input.setValidator(QDoubleValidator(0, self.MAX_DOOR_HEIGHT, 2))
-        lock_x_layout.addWidget(self.lock_x_input)
-        lock_layout.addLayout(lock_x_layout)
-
-        # Z position row
-        lock_z_layout = QHBoxLayout()
-        self.lock_z_auto_check = SimpleDollarCheckBox("lock_z_auto", "Auto", self)
-        lock_z_layout.addWidget(self.lock_z_auto_check)
-        lock_z_layout.addWidget(ThemedLabel("Z:"))
-        self.lock_z_input = SimpleDollarLineEdit("lock_z_position", self)
-        self.lock_z_input.setValidator(QDoubleValidator(0, 500, 2))
-        lock_z_layout.addWidget(self.lock_z_input)
-        lock_layout.addLayout(lock_z_layout)
-
-        layout.addWidget(lock_group)
-
-        # --- Barrel Configuration ---
-        barrel_group = ThemedGroupBox("Barrel Configuration")
-        barrel_layout = QVBoxLayout()
-        barrel_group.setLayout(barrel_layout)
-
-        self.barrel_active_check = SimpleDollarCheckBox("barrel_active", "Active", self)
-        barrel_layout.addWidget(self.barrel_active_check)
-
-        # X position row
-        barrel_x_layout = QHBoxLayout()
-        self.barrel_x_auto_check = SimpleDollarCheckBox("barrel_x_auto", "Auto", self)
-        barrel_x_layout.addWidget(self.barrel_x_auto_check)
-        barrel_x_layout.addWidget(ThemedLabel("X:"))
-        self.barrel_x_input = SimpleDollarLineEdit("barrel_x_position", self)
-        self.barrel_x_input.setValidator(QDoubleValidator(0, self.MAX_DOOR_HEIGHT, 2))
-        barrel_x_layout.addWidget(self.barrel_x_input)
-        barrel_layout.addLayout(barrel_x_layout)
-
-        # Y position row
-        barrel_y_layout = QHBoxLayout()
-        self.barrel_y_auto_check = SimpleDollarCheckBox("barrel_y_auto", "Auto", self)
-        barrel_y_layout.addWidget(self.barrel_y_auto_check)
-        barrel_y_layout.addWidget(ThemedLabel("Y:"))
-        self.barrel_y_input = SimpleDollarLineEdit("barrel_y_position", self)
-        self.barrel_y_input.setValidator(QDoubleValidator(0, 500, 2))
-        barrel_y_layout.addWidget(self.barrel_y_input)
-        barrel_layout.addLayout(barrel_y_layout)
-
-        layout.addWidget(barrel_group)
 
         # --- Hinge Configuration ---
         hinge_group = ThemedGroupBox("Hinge Configuration")
@@ -257,6 +252,13 @@ class FrameTab(QWidget):
         hinge_z_layout.addWidget(self.hinge_z_input)
         hinge_layout.addLayout(hinge_z_layout)
 
+        # Shared X auto position
+        hinge_x_auto_layout = QHBoxLayout()
+        self.hinge_x_auto_check = SimpleDollarCheckBox("hinge_x_auto", "Auto X (all)", self)
+        hinge_x_auto_layout.addWidget(self.hinge_x_auto_check)
+        hinge_x_auto_layout.addStretch()
+        hinge_layout.addLayout(hinge_x_auto_layout)
+
         # Hinge positions container (scrollable for up to 10 hinges)
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
@@ -274,7 +276,6 @@ class FrameTab(QWidget):
 
         # Tracked arrays (rebuilt by update_hinge_count)
         self.hinge_inputs = []
-        self.hinge_x_auto_checks = []
         self.hinge_active_checks = []
 
         layout.addWidget(hinge_group, 1)
@@ -349,7 +350,6 @@ class FrameTab(QWidget):
                 widget.deleteLater()
 
         self.hinge_inputs = []
-        self.hinge_x_auto_checks = []
         self.hinge_active_checks = []
 
         for i in range(count):
@@ -365,11 +365,6 @@ class FrameTab(QWidget):
             hinge_layout.addWidget(position_input)
             self.hinge_inputs.append(position_input)
 
-            # X auto checkbox
-            x_auto_check = SimpleDollarCheckBox(f"hinge{i+1}_x_auto", "Auto", self)
-            hinge_layout.addWidget(x_auto_check)
-            self.hinge_x_auto_checks.append(x_auto_check)
-
             # Active checkbox
             active_check = SimpleDollarCheckBox(f"hinge{i+1}_active", "On", self)
             hinge_layout.addWidget(active_check)
@@ -379,8 +374,6 @@ class FrameTab(QWidget):
 
         # Sync values from main_window
         for w in self.hinge_inputs:
-            w.update_from_main_window()
-        for w in self.hinge_x_auto_checks:
             w.update_from_main_window()
         for w in self.hinge_active_checks:
             w.update_from_main_window()
@@ -406,12 +399,11 @@ class FrameTab(QWidget):
                 changes["hinge_z_position"] = round(door_depth / 2, 1)
 
             # 2. Individual hinge X positions
-            if count > 0:
+            if count > 0 and bool(dv("hinge_x_auto")):
                 auto_positions = self._calculate_hinge_x_positions(count, door_height)
                 for i in range(count):
-                    if bool(dv(f"hinge{i+1}_x_auto")):
-                        if i < len(auto_positions):
-                            changes[f"hinge{i+1}_x_position"] = round(auto_positions[i], 1)
+                    if i < len(auto_positions):
+                        changes[f"hinge{i+1}_x_position"] = round(auto_positions[i], 1)
 
             # 3. Lock X position
             if bool(dv("lock_x_auto")):
@@ -428,7 +420,7 @@ class FrameTab(QWidget):
 
             # 6. Barrel Y position
             if bool(dv("barrel_y_auto")):
-                changes["barrel_y_position"] = round(door_depth / 2, 1)
+                changes["barrel_y_position"] = dv("barrel_y_position") or 50
 
             if changes:
                 self.main_window.update_dollar_variables(changes)
@@ -645,7 +637,6 @@ class FrameTab(QWidget):
                 widget.deleteLater()
 
         self.hinge_inputs = []
-        self.hinge_x_auto_checks = []
         self.hinge_active_checks = []
 
         changes = {}
@@ -661,10 +652,6 @@ class FrameTab(QWidget):
             position_input.setValidator(QDoubleValidator(0, self.MAX_DOOR_HEIGHT, 2))
             hinge_layout.addWidget(position_input)
             self.hinge_inputs.append(position_input)
-
-            x_auto_check = SimpleDollarCheckBox(f"hinge{i+1}_x_auto", "Auto", self)
-            hinge_layout.addWidget(x_auto_check)
-            self.hinge_x_auto_checks.append(x_auto_check)
 
             active_check = SimpleDollarCheckBox(f"hinge{i+1}_active", "On", self)
             hinge_layout.addWidget(active_check)
@@ -716,9 +703,9 @@ class FrameTab(QWidget):
         self.hinge_z_input.setEnabled(not bool(dv("hinge_z_auto")))
 
         # Individual hinge X inputs
-        for i, input_field in enumerate(self.hinge_inputs):
-            x_auto = bool(dv(f"hinge{i+1}_x_auto"))
-            input_field.setEnabled(not x_auto)
+        hinge_x_auto = bool(dv("hinge_x_auto"))
+        for input_field in self.hinge_inputs:
+            input_field.setEnabled(not hinge_x_auto)
 
     def update_ui_from_main_window(self):
         """Update all UI elements from main_window values"""
@@ -736,11 +723,11 @@ class FrameTab(QWidget):
         # Update checkboxes
         for widget in [self.lock_active_check, self.lock_x_auto_check, self.lock_z_auto_check,
                        self.barrel_active_check, self.barrel_x_auto_check, self.barrel_y_auto_check,
-                       self.hinge_z_auto_check]:
+                       self.hinge_z_auto_check, self.hinge_x_auto_check]:
             widget.update_from_main_window()
 
         # Update hinge rows
-        for widget in self.hinge_inputs + self.hinge_x_auto_checks + self.hinge_active_checks:
+        for widget in self.hinge_inputs + self.hinge_active_checks:
             widget.update_from_main_window()
 
         # Update radio buttons
