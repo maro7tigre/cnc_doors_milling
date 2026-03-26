@@ -479,7 +479,7 @@ class SetupTab(QWidget):
 
         dv = self.main_window.get_dollar_variable
         count = self.hinge_count_spin.value()
-        all_components = ["lock"] + [f"hinge{i+1}" for i in range(10)]
+        all_components = ["lock"] + [f"hinge{i+1}" for i in range(10)] + ["barrel"]
 
         # Build current ordered list from existing numeric values (skip force_inactive)
         active_with_order = []
@@ -518,7 +518,7 @@ class SetupTab(QWidget):
             self.main_window.update_dollar_variables(changes)
             self.order_widget.set_order(current_order)
             # Refresh active checkboxes so they show checked/unchecked correctly
-            for w in [self.lock_active_check] + self.hinge_active_checks:
+            for w in [self.lock_active_check] + self.hinge_active_checks + [self.barrel_active_check]:
                 w.update_from_main_window()
         finally:
             self._updating_order = False
@@ -538,11 +538,13 @@ class SetupTab(QWidget):
                 changes[f"{comp}_active"] = 0
         if "lock" not in order_list:
             changes["lock_active"] = 0
+        if "barrel" not in order_list:
+            changes["barrel_active"] = 0
 
         self._updating_order = True
         try:
             self.main_window.update_dollar_variables(changes)
-            for w in [self.lock_active_check] + self.hinge_active_checks:
+            for w in [self.lock_active_check] + self.hinge_active_checks + [self.barrel_active_check]:
                 w.update_from_main_window()
         finally:
             self._updating_order = False
@@ -573,6 +575,14 @@ class SetupTab(QWidget):
             if n > 0:
                 active.append((f"hinge{i+1}", n))
 
+        val = dv("barrel_active")
+        try:
+            n = int(val)
+        except (TypeError, ValueError):
+            n = 0
+        if n > 0:
+            active.append(("barrel", n))
+
         active.sort(key=lambda x: x[1])
         order_list = [c for c, _ in active]
 
@@ -590,7 +600,7 @@ class SetupTab(QWidget):
         """Handle variable changes from simple dollar widgets"""
         if self.main_window and not self._auto_calculation_running:
             # Active vars (except barrel) feed into the milling order system
-            if var_name.endswith("_active") and var_name != "barrel_active":
+            if var_name.endswith("_active"):
                 comp = var_name.replace("_active", "")
                 if bool(value):
                     self._compute_order_and_write(force_active_add=[comp])

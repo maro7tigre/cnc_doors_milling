@@ -66,6 +66,19 @@ _O_KEYWORDS    = {'sub', 'endsub', 'call', 'return',
                   'while', 'endwhile', 'do', 'break', 'continue',
                   'repeat', 'endrepeat'}
 
+# LinuxCNC math functions (valid inside [...] expressions)
+_FUNCTIONS     = {'abs', 'acos', 'asin', 'atan', 'cos', 'exp',
+                  'fix', 'fup', 'ln', 'round', 'sin', 'sqrt', 'tan',
+                  'exists'}
+
+# LinuxCNC expression operators (keyword form, case-insensitive)
+_OPERATORS     = {'mod', 'and', 'or', 'xor', 'not',
+                  'eq', 'ne', 'lt', 'le', 'gt', 'ge'}
+
+# Pre-compiled — whole-word, case-insensitive
+_FUNC_RE = re.compile(r'\b(' + '|'.join(_FUNCTIONS) + r')\b', re.IGNORECASE)
+_OP_RE   = re.compile(r'\b(' + '|'.join(_OPERATORS) + r')\b', re.IGNORECASE)
+
 
 class GCodeSyntaxHighlighter(QSyntaxHighlighter):
     """LinuxCNC G-code syntax highlighter with Python template variable validation."""
@@ -148,6 +161,10 @@ class GCodeSyntaxHighlighter(QSyntaxHighlighter):
         # LinuxCNC-specific
         self.hash_param_format = _fmt("#b975d4")  # light blue – #5 / #<name>
         self.o_word_format     = _fmt('#ff9e64')  # orange     – o100 sub/call/if…
+
+        # Expression syntax
+        self.func_format = _fmt('#56b6c2')  # cyan-teal – ABS, SIN, SQRT, EXISTS …
+        self.op_format   = _fmt("#e6c11d")  # purple    – AND, OR, MOD, EQ, LT …
 
         # Comments and delimiters
         self.comment_format = _fmt('#636d83')   # dim gray – (…) and ;
@@ -306,7 +323,40 @@ class GCodeSyntaxHighlighter(QSyntaxHighlighter):
             # ── Skip anything else ────────────────────────────────────────
             i += 1
 
+        # ── Functions and operators inside [...] expressions ──────────────
+        # Second pass so these always win over base_format. Comment ranges
+        # are re-derived here to avoid coloring inside ( ) or ; text.
+        self._highlight_expr_keywords(text)
+
     # ── Helpers ───────────────────────────────────────────────────────────────
+
+    def _highlight_expr_keywords(self, text):
+        """Highlight function names and keyword operators, skipping comments."""
+        comment_ranges = []
+        i = 0
+        length = len(text)
+        while i < length:
+            if text[i] == '(':
+                end = text.find(')', i)
+                stop = end + 1 if end != -1 else length
+                comment_ranges.append((i, stop))
+                i = stop
+            elif text[i] == ';':
+                comment_ranges.append((i, length))
+                break
+            else:
+                i += 1
+
+        def in_comment(start, end):
+            return any(cs <= start and end <= ce for cs, ce in comment_ranges)
+
+        for m in _FUNC_RE.finditer(text):
+            if not in_comment(m.start(), m.end()):
+                self.setFormat(m.start(), m.end() - m.start(), self.func_format)
+
+        for m in _OP_RE.finditer(text):
+            if not in_comment(m.start(), m.end()):
+                self.setFormat(m.start(), m.end() - m.start(), self.op_format)
 
     def _consume_value(self, text, i):
         """Advance i past a word's value: number, expression, or parameter ref."""
@@ -459,6 +509,8 @@ class GCodeEditor(QPlainTextEdit):
       - All 9 axes: X Y Z A B C U V W
       - LinuxCNC parameters: #5, #<name>, #[expr]
       - O-words: o100 sub / call / if / while …
+      - Math functions: ABS, SIN, SQRT, EXISTS … (cyan-teal)
+      - Keyword operators: AND, OR, MOD, EQ, LT … (purple)
       - Python template variables: {VAR:default}, {$variable}
       - Both comment styles: (…) and ;
     """

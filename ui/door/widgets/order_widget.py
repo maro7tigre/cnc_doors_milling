@@ -159,3 +159,7 @@ class OrderWidget(QWidget):
                 item = QListWidgetItem(f"Hinge {hinge_num}")
                 item.setData(Qt.UserRole, item_id)
                 self.order_list.addItem(item)
+            elif item_id == "barrel":
+                item = QListWidgetItem("Barrel")
+                item.setData(Qt.UserRole, "barrel")
+                self.order_list.addItem(item)
