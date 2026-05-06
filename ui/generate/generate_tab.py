@@ -226,7 +226,7 @@ class GenerateTab(QWidget):
                     content = item.get_content()
                     if content:
                         content_windows = content.replace('\n', '\r\n').replace('\r\r\n', '\r\n')
-                        filename = f"{side_fr}.txt"
+                        filename = f"{side_fr}.ngc"
                         filepath = os.path.join(cnc_dir, filename)
                         with open(filepath, 'w', encoding='utf-8') as f:
                             f.write(content_windows)
