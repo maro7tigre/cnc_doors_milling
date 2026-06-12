@@ -53,8 +53,8 @@ class ScaledImageLabel(QLabel):
         """Update displayed pixmap based on current size"""
         if self._pixmap and not self._pixmap.isNull():
             scaled = self._pixmap.scaled(
-                self.size(), 
-                Qt.KeepAspectRatio, 
+                self.contentsRect().size(),
+                Qt.KeepAspectRatio,
                 Qt.SmoothTransformation
             )
             super().setPixmap(scaled)
@@ -108,10 +108,10 @@ class ScaledPreviewLabel(QLabel):
     def updateDisplay(self):
         """Update displayed content based on current size"""
         if self._pixmap and not self._pixmap.isNull():
-            # Scale pixmap to fit available space while maintaining aspect ratio
+            # Scale to the content rect so the stylesheet padding/border don't clip the image
             scaled = self._pixmap.scaled(
-                self.size(), 
-                Qt.KeepAspectRatio, 
+                self.contentsRect().size(),
+                Qt.KeepAspectRatio,
                 Qt.SmoothTransformation
             )
             super().setPixmap(scaled)
