@@ -20,11 +20,11 @@ class FramePreview(QWidget):
         self.door_height = 2100
         self.door_width = 900
         self.door_depth = 40
-        self.hinge_z_position = 20
+        self.hinge_z_position = 0
         self.hinge_x_positions = []
         self.hinge_active = []
         self.lock_x_position = 1050
-        self.lock_z_position = 20
+        self.lock_z_position = 0
         self.lock_active = True
         self.barrel_x_position = 1050
         self.barrel_y_position = 20
@@ -39,11 +39,11 @@ class FramePreview(QWidget):
         self.door_height = config.get('door_height', 2100)
         self.door_width = config.get('door_width', 900)
         self.door_depth = config.get('door_depth', 40)
-        self.hinge_z_position = config.get('hinge_z_position', 20)
+        self.hinge_z_position = config.get('hinge_z_position', 0)
         self.hinge_x_positions = config.get('hinge_x_positions', [])
         self.hinge_active = config.get('hinge_active', [])
         self.lock_x_position = config.get('lock_x_position', 1050)
-        self.lock_z_position = config.get('lock_z_position', 20)
+        self.lock_z_position = config.get('lock_z_position', 0)
         self.lock_active = config.get('lock_active', True)
         self.barrel_x_position = config.get('barrel_x_position', 1050)
         self.barrel_y_position = config.get('barrel_y_position', 20)
@@ -135,8 +135,7 @@ class FramePreview(QWidget):
 
         hinge_h_px = max(6, scale * 60)
         hinge_w_px = max(5, w * 0.6)
-        z_clamped = max(0, min(self.hinge_z_position, self.door_depth))
-        hinge_x_center = x + z_clamped * scale
+        hinge_x_left = x + self.hinge_z_position * scale
 
         for i, (x_pos, active) in enumerate(zip(self.hinge_x_positions, self.hinge_active)):
             if not active or x_pos <= 0:
@@ -144,7 +143,7 @@ class FramePreview(QWidget):
 
             hy = y + x_pos * scale
             painter.drawRect(
-                int(hinge_x_center - hinge_w_px / 2),
+                int(hinge_x_left),
                 int(hy - hinge_h_px / 2),
                 int(hinge_w_px),
                 int(hinge_h_px)
@@ -153,7 +152,7 @@ class FramePreview(QWidget):
             # Label
             painter.setPen(QColor(255, 255, 255))
             painter.setFont(QFont("Arial", max(5, int(hinge_h_px * 0.3))))
-            painter.drawText(int(hinge_x_center - hinge_w_px / 2 + 1),
+            painter.drawText(int(hinge_x_left + 1),
                              int(hy + hinge_h_px * 0.15), f"H{i+1}")
             painter.setPen(QPen(QColor(30, 80, 160), 1))
 
@@ -172,8 +171,7 @@ class FramePreview(QWidget):
             lock_h_px = max(8, scale * 120)
             lock_w_px = max(5, w * 0.6)
             ly = y + (self.door_height - self.lock_x_position) * scale
-            z_clamped = max(0, min(self.lock_z_position, self.door_depth))
-            center_x = x + z_clamped * scale
+            center_x = x + self.lock_z_position * scale
 
             painter.drawRect(
                 int(center_x - lock_w_px / 2),

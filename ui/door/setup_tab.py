@@ -131,7 +131,7 @@ class SetupTab(QWidget):
         lock_z_layout.addWidget(self.lock_z_auto_check)
         lock_z_layout.addWidget(ThemedLabel("Z:"))
         self.lock_z_input = SimpleDollarLineEdit("lock_z_position", self)
-        self.lock_z_input.setValidator(QDoubleValidator(0, 500, 2))
+        self.lock_z_input.setValidator(QDoubleValidator(-500, 500, 2))
         lock_z_layout.addWidget(self.lock_z_input)
         lock_layout.addLayout(lock_z_layout)
 
@@ -242,13 +242,11 @@ class SetupTab(QWidget):
         count_layout.addStretch()
         hinge_layout.addLayout(count_layout)
 
-        # Shared Z position
+        # Shared Z position (no auto — defaults to 0, user sets manually)
         hinge_z_layout = QHBoxLayout()
-        self.hinge_z_auto_check = SimpleDollarCheckBox("hinge_z_auto", "Auto", self)
-        hinge_z_layout.addWidget(self.hinge_z_auto_check)
         hinge_z_layout.addWidget(ThemedLabel("Z (all):"))
         self.hinge_z_input = SimpleDollarLineEdit("hinge_z_position", self)
-        self.hinge_z_input.setValidator(QDoubleValidator(0, 500, 2))
+        self.hinge_z_input.setValidator(QDoubleValidator(-500, 500, 2))
         hinge_z_layout.addWidget(self.hinge_z_input)
         hinge_layout.addLayout(hinge_z_layout)
 
@@ -394,31 +392,27 @@ class SetupTab(QWidget):
             door_depth = dv("door_depth") or 40
             count = self.hinge_count_spin.value()
 
-            # 1. Hinge shared Z position
-            if bool(dv("hinge_z_auto")):
-                changes["hinge_z_position"] = round(door_depth / 2, 1)
-
-            # 2. Individual hinge X positions
+            # 1. Individual hinge X positions
             if count > 0 and bool(dv("hinge_x_auto")):
                 auto_positions = self._calculate_hinge_x_positions(count, door_height)
                 for i in range(count):
                     if i < len(auto_positions):
                         changes[f"hinge{i+1}_x_position"] = round(auto_positions[i], 1)
 
-            # 3. Lock X position
+            # 2. Lock X position
             if bool(dv("lock_x_auto")):
                 changes["lock_x_position"] = round(door_height / 2, 1)
 
-            # 4. Lock Z position
+            # 3. Lock Z position
             if bool(dv("lock_z_auto")):
                 changes["lock_z_position"] = round(door_depth / 2, 1)
 
-            # 5. Barrel X position (follows lock X by default)
+            # 4. Barrel X position (follows lock X by default)
             if bool(dv("barrel_x_auto")):
                 lock_x = changes.get("lock_x_position", dv("lock_x_position") or door_height / 2)
                 changes["barrel_x_position"] = round(lock_x, 1)
 
-            # 6. Barrel Y position
+            # 5. Barrel Y position
             if bool(dv("barrel_y_auto")):
                 changes["barrel_y_position"] = dv("barrel_y_position") or 50
 
@@ -459,6 +453,7 @@ class SetupTab(QWidget):
         self.update_ui_from_main_window()
         self.run_auto_calculations()
         self.update_preview()
+        self.update_enabled_states()
 
     # MARK: - Milling Order System
 
@@ -596,16 +591,32 @@ class SetupTab(QWidget):
         """Handle auto checkbox state changes"""
         self.update_enabled_states()
 
+    def _is_profile_active_for(self, comp: str) -> bool:
+        """Return True if the profile for this component is currently selected."""
+        if not self.main_window:
+            return True
+        dv = self.main_window.get_dollar_variable
+        if comp.startswith("hinge"):
+            return bool(dv("selected_hinge"))
+        if comp == "lock":
+            return bool(dv("selected_lock"))
+        if comp == "barrel":
+            return bool(dv("selected_barrel"))
+        return True
+
     def on_variable_changed(self, var_name, value):
         """Handle variable changes from simple dollar widgets"""
         if self.main_window and not self._auto_calculation_running:
-            # Active vars (except barrel) feed into the milling order system
             if var_name.endswith("_active"):
                 comp = var_name.replace("_active", "")
-                if bool(value):
-                    self._compute_order_and_write(force_active_add=[comp])
-                else:
-                    self._compute_order_and_write(force_inactive=[comp])
+                # Persist the user's intention regardless of profile state
+                self.main_window.update_ui_state(f"{var_name}_ui", bool(value))
+                # Only feed into the order system if the profile is selected
+                if self._is_profile_active_for(comp):
+                    if bool(value):
+                        self._compute_order_and_write(force_active_add=[comp])
+                    else:
+                        self._compute_order_and_write(force_inactive=[comp])
             else:
                 self.main_window.update_dollar_variable(var_name, value)
                 if var_name.endswith("_auto"):
@@ -695,11 +706,15 @@ class SetupTab(QWidget):
         self.run_auto_calculations()
 
     def update_enabled_states(self):
-        """Update enabled/disabled states based on auto checkboxes"""
+        """Update enabled/disabled states based on auto checkboxes and profile selection."""
         if not self.main_window:
             return
 
         dv = self.main_window.get_dollar_variable
+
+        hinge_profile = bool(dv("selected_hinge"))
+        lock_profile = bool(dv("selected_lock"))
+        barrel_profile = bool(dv("selected_barrel"))
 
         # Lock inputs
         self.lock_x_input.setEnabled(not bool(dv("lock_x_auto")))
@@ -709,13 +724,33 @@ class SetupTab(QWidget):
         self.barrel_x_input.setEnabled(not bool(dv("barrel_x_auto")))
         self.barrel_y_input.setEnabled(not bool(dv("barrel_y_auto")))
 
-        # Hinge shared Z
-        self.hinge_z_input.setEnabled(not bool(dv("hinge_z_auto")))
+        # Hinge shared Z — always enabled (no auto)
+        # (hinge_z_input is never auto-disabled)
 
         # Individual hinge X inputs
         hinge_x_auto = bool(dv("hinge_x_auto"))
         for input_field in self.hinge_inputs:
             input_field.setEnabled(not hinge_x_auto)
+
+        # Active checkboxes: disable (and visually uncheck) when profile not selected
+        for check in self.hinge_active_checks:
+            if not hinge_profile:
+                check.blockSignals(True)
+                check.setChecked(False)
+                check.blockSignals(False)
+            check.setEnabled(hinge_profile)
+
+        if not lock_profile:
+            self.lock_active_check.blockSignals(True)
+            self.lock_active_check.setChecked(False)
+            self.lock_active_check.blockSignals(False)
+        self.lock_active_check.setEnabled(lock_profile)
+
+        if not barrel_profile:
+            self.barrel_active_check.blockSignals(True)
+            self.barrel_active_check.setChecked(False)
+            self.barrel_active_check.blockSignals(False)
+        self.barrel_active_check.setEnabled(barrel_profile)
 
     def update_ui_from_main_window(self):
         """Update all UI elements from main_window values"""
@@ -733,7 +768,7 @@ class SetupTab(QWidget):
         # Update checkboxes
         for widget in [self.lock_active_check, self.lock_x_auto_check, self.lock_z_auto_check,
                        self.barrel_active_check, self.barrel_x_auto_check, self.barrel_y_auto_check,
-                       self.hinge_z_auto_check, self.hinge_x_auto_check]:
+                       self.hinge_x_auto_check]:
             widget.update_from_main_window()
 
         # Update hinge rows
@@ -770,11 +805,11 @@ class SetupTab(QWidget):
             'door_height': dv("door_height") or 2100,
             'door_width': dv("door_width") or 900,
             'door_depth': dv("door_depth") or 40,
-            'hinge_z_position': dv("hinge_z_position") or 20,
+            'hinge_z_position': float(dv("hinge_z_position")) if dv("hinge_z_position") not in (None, '') else 0,
             'hinge_x_positions': hinge_x_positions,
             'hinge_active': hinge_active,
             'lock_x_position': dv("lock_x_position") or 1050,
-            'lock_z_position': dv("lock_z_position") or 20,
+            'lock_z_position': float(dv("lock_z_position")) if dv("lock_z_position") not in (None, '') else 0,
             'lock_active': bool(dv("lock_active")),
             'barrel_x_position': dv("barrel_x_position") or 1050,
             'barrel_y_position': dv("barrel_y_position") or 20,

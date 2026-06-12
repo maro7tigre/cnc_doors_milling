@@ -104,8 +104,8 @@ class MainWindow(QMainWindow):
             "machine_z_offset": 0,
 
             # Hinge configuration - shared Z position and X auto
-            "hinge_z_position": 20,
-            "hinge_z_auto": 1,
+            "hinge_z_position": 0,
+            "hinge_z_auto": 0,
             "hinge_x_auto": 1,
 
             # Hinges 1-10 - individual X positions along door height
@@ -144,7 +144,7 @@ class MainWindow(QMainWindow):
             "lock_active": 1,
             "lock_x_position": 1050,
             "lock_x_auto": 1,
-            "lock_z_position": 20,
+            "lock_z_position": 0,
             "lock_z_auto": 1,
 
             # Barrel configuration
@@ -166,6 +166,16 @@ class MainWindow(QMainWindow):
             "selected_hinge": None,
             "selected_lock": None,
             "selected_barrel": None,
+        }
+
+        # Hidden UI-layer active state — remembers user's checkbox preferences
+        # independently of whether the matching profile is currently selected.
+        # NOT exposed in the $ variable dialog.
+        self.ui_state = {
+            **{f"hinge{i+1}_active_ui": bool(self.dollar_variables.get(f"hinge{i+1}_active", 0))
+               for i in range(10)},
+            "lock_active_ui": bool(self.dollar_variables.get("lock_active", 0)),
+            "barrel_active_ui": bool(self.dollar_variables.get("barrel_active", 0)),
         }
 
         # Initialize settings
@@ -401,20 +411,20 @@ class MainWindow(QMainWindow):
 
     def update_tab_states(self):
         """Update tab enabled states based on current data"""
-        # Enable frame tab if all three profiles are selected
         hinge_selected = self.dollar_variables.get("selected_hinge")
         lock_selected = self.dollar_variables.get("selected_lock")
         barrel_selected = self.dollar_variables.get("selected_barrel")
 
-        if hinge_selected and lock_selected and barrel_selected:
+        # At least one profile must be selected to proceed
+        any_selected = bool(hinge_selected or lock_selected or barrel_selected)
+
+        if any_selected:
             self.tabs.setTabEnabled(1, True)
 
-            # Enable generate tab if door is configured
             door_configured = (
                 self.dollar_variables.get("door_height") and
                 self.dollar_variables.get("door_width")
             )
-
             if door_configured:
                 self.tabs.setTabEnabled(2, True)
         else:
@@ -494,6 +504,77 @@ class MainWindow(QMainWindow):
         if barrel_profile:
             barrel_gcode = self.get_barrel_profile_gcode(barrel_profile)
             self.update_current_gcodes("barrel_gcode", barrel_gcode)
+
+    # MARK: - UI State (hidden active preferences)
+
+    def update_ui_state(self, name: str, value):
+        """Update a hidden UI-state variable."""
+        self.ui_state[name] = value
+
+    def get_ui_state(self, name: str = None):
+        """Get a hidden UI-state variable (or the full dict if name is None)."""
+        if name is None:
+            return self.ui_state.copy()
+        return self.ui_state.get(name, None)
+
+    def select_profile(self, profile_type: str, profile_name: str):
+        """Select one profile type, update its gcode, and restore active states."""
+        dv_key = f"selected_{profile_type}"
+        self.dollar_variables[dv_key] = profile_name
+
+        if profile_type == "hinge":
+            self.current_gcodes["hinge_gcode"] = self.get_hinge_profile_gcode(profile_name)
+            count = (self.frame_tab.hinge_count_spin.value()
+                     if hasattr(self.frame_tab, 'hinge_count_spin') else 10)
+            comps_to_activate = [
+                f"hinge{i+1}" for i in range(count)
+                if self.ui_state.get(f"hinge{i+1}_active_ui", False)
+            ]
+        elif profile_type == "lock":
+            self.current_gcodes["lock_gcode"] = self.get_lock_profile_gcode(profile_name)
+            comps_to_activate = ["lock"] if self.ui_state.get("lock_active_ui", True) else []
+        elif profile_type == "barrel":
+            self.current_gcodes["barrel_gcode"] = self.get_barrel_profile_gcode(profile_name)
+            comps_to_activate = ["barrel"] if self.ui_state.get("barrel_active_ui", True) else []
+        else:
+            return
+
+        if comps_to_activate and hasattr(self.frame_tab, '_compute_order_and_write'):
+            self.frame_tab._compute_order_and_write(force_active_add=comps_to_activate)
+
+        self.events.emit_variables_updated()
+        self.events.emit_profiles_updated()
+
+    def deselect_profile(self, profile_type: str):
+        """Deselect one profile type: save active-ui memory, zero actives, clear gcode."""
+        dv_key = f"selected_{profile_type}"
+        if self.dollar_variables.get(dv_key) is None:
+            return
+
+        if profile_type == "hinge":
+            for i in range(10):
+                self.ui_state[f"hinge{i+1}_active_ui"] = bool(
+                    self.dollar_variables.get(f"hinge{i+1}_active", 0))
+            self.current_gcodes["hinge_gcode"] = ""
+            comps_to_deactivate = [f"hinge{i+1}" for i in range(10)]
+        elif profile_type == "lock":
+            self.ui_state["lock_active_ui"] = bool(self.dollar_variables.get("lock_active", 0))
+            self.current_gcodes["lock_gcode"] = ""
+            comps_to_deactivate = ["lock"]
+        elif profile_type == "barrel":
+            self.ui_state["barrel_active_ui"] = bool(self.dollar_variables.get("barrel_active", 0))
+            self.current_gcodes["barrel_gcode"] = ""
+            comps_to_deactivate = ["barrel"]
+        else:
+            return
+
+        self.dollar_variables[dv_key] = None
+
+        if hasattr(self.frame_tab, '_compute_order_and_write'):
+            self.frame_tab._compute_order_and_write(force_inactive=comps_to_deactivate)
+
+        self.events.emit_variables_updated()
+        self.events.emit_profiles_updated()
 
     # MARK: - Variable Updates
 
@@ -671,6 +752,13 @@ class MainWindow(QMainWindow):
 
                     # Update dollar variables
                     self.dollar_variables.update(data["dollar_variables"])
+
+                    # Sync hidden ui_state from loaded active values
+                    for i in range(10):
+                        self.ui_state[f"hinge{i+1}_active_ui"] = bool(
+                            self.dollar_variables.get(f"hinge{i+1}_active", 0))
+                    self.ui_state["lock_active_ui"] = bool(self.dollar_variables.get("lock_active", 0))
+                    self.ui_state["barrel_active_ui"] = bool(self.dollar_variables.get("barrel_active", 0))
 
                     # Force frame tab to rebuild hinge UI based on loaded data
                     if hasattr(self.frame_tab, 'rebuild_door_widgets_from_variables'):

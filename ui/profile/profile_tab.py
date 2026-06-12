@@ -136,10 +136,13 @@ class ProfileTab(QWidget):
     def connect_signals(self):
         """Connect UI signals"""
         self.hinge_grid.profile_selected.connect(self.on_profile_selected)
+        self.hinge_grid.profile_deselected.connect(self.on_profile_deselected)
         self.hinge_grid.profile_deleted.connect(self.on_profile_deleted)
         self.lock_grid.profile_selected.connect(self.on_profile_selected)
+        self.lock_grid.profile_deselected.connect(self.on_profile_deselected)
         self.lock_grid.profile_deleted.connect(self.on_profile_deleted)
         self.barrel_grid.profile_selected.connect(self.on_profile_selected)
+        self.barrel_grid.profile_deselected.connect(self.on_profile_deselected)
         self.barrel_grid.profile_deleted.connect(self.on_profile_deleted)
 
         self.next_button.clicked.connect(self.next_clicked)
@@ -147,23 +150,30 @@ class ProfileTab(QWidget):
     # MARK: - Event Handlers
 
     def on_profile_selected(self, profile_type, profile_name):
-        """Handle profile selection from grids"""
+        """Handle profile selection — select individual profile and restore active states."""
         if profile_type == "hinge":
             self.selected_hinge = profile_name
-            if self.main_window:
-                self.main_window.update_dollar_variable("selected_hinge", profile_name)
         elif profile_type == "lock":
             self.selected_lock = profile_name
-            if self.main_window:
-                self.main_window.update_dollar_variable("selected_lock", profile_name)
         elif profile_type == "barrel":
             self.selected_barrel = profile_name
-            if self.main_window:
-                self.main_window.update_dollar_variable("selected_barrel", profile_name)
 
-        # Update main window if all three selected
-        if self.selected_hinge and self.selected_lock and self.selected_barrel and self.main_window:
-            self.main_window.select_profiles(self.selected_hinge, self.selected_lock, self.selected_barrel)
+        if self.main_window:
+            self.main_window.select_profile(profile_type, profile_name)
+
+        self.update_selection_display()
+
+    def on_profile_deselected(self, profile_type, profile_name):
+        """Handle profile deselection (toggle-off click)."""
+        if profile_type == "hinge":
+            self.selected_hinge = None
+        elif profile_type == "lock":
+            self.selected_lock = None
+        elif profile_type == "barrel":
+            self.selected_barrel = None
+
+        if self.main_window:
+            self.main_window.deselect_profile(profile_type)
 
         self.update_selection_display()
 
@@ -179,16 +189,16 @@ class ProfileTab(QWidget):
         elif profile_type == "barrel":
             self.main_window.update_barrel_profile(profile_name, None)
 
-        # Clear selection if deleted profile was selected
+        # If the deleted profile was selected, run full deselect (saves ui_state, clears gcode)
         if profile_type == "hinge" and self.selected_hinge == profile_name:
             self.selected_hinge = None
-            self.main_window.update_dollar_variable("selected_hinge", None)
+            self.main_window.deselect_profile("hinge")
         elif profile_type == "lock" and self.selected_lock == profile_name:
             self.selected_lock = None
-            self.main_window.update_dollar_variable("selected_lock", None)
+            self.main_window.deselect_profile("lock")
         elif profile_type == "barrel" and self.selected_barrel == profile_name:
             self.selected_barrel = None
-            self.main_window.update_dollar_variable("selected_barrel", None)
+            self.main_window.deselect_profile("barrel")
 
         self.update_selection_display()
 
@@ -255,5 +265,5 @@ class ProfileTab(QWidget):
             f"Selected: [Hinge: {hinge_text}] [Lock: {lock_text}] [Barrel: {barrel_text}]"
         )
 
-        all_selected = bool(self.selected_hinge and self.selected_lock and self.selected_barrel)
-        self.next_button.setEnabled(all_selected)
+        any_selected = bool(self.selected_hinge or self.selected_lock or self.selected_barrel)
+        self.next_button.setEnabled(any_selected)

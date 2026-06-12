@@ -14,8 +14,9 @@ class ProfileGrid(QScrollArea):
     """Profile grid with clear separation of UI and functionality"""
     
     # MARK: - Signals
-    profile_selected = Signal(str, str)  # (profile_type, profile_name)
-    profile_deleted = Signal(str, str)   # (profile_type, profile_name)
+    profile_selected = Signal(str, str)    # (profile_type, profile_name)
+    profile_deselected = Signal(str, str)  # (profile_type, profile_name) — toggled off
+    profile_deleted = Signal(str, str)     # (profile_type, profile_name)
     
     def __init__(self, profile_name, dialog_class, parent=None):
         super().__init__(parent)
@@ -146,13 +147,18 @@ class ProfileGrid(QScrollArea):
     
     # MARK: - Event Handlers
     def on_profile_clicked(self, name):
-        """Handle profile selection"""
+        """Handle profile selection — clicking an already-selected profile deselects it."""
         if name == "Add":
             return
-        
-        self.selected_profile = name
-        self.update_selection_states()
-        self.profile_selected.emit(self.profile_name, name)
+
+        if name == self.selected_profile:
+            self.selected_profile = None
+            self.update_selection_states()
+            self.profile_deselected.emit(self.profile_name, name)
+        else:
+            self.selected_profile = name
+            self.update_selection_states()
+            self.profile_selected.emit(self.profile_name, name)
     
     def create_new_profile(self):
         """Create new profile using dialog"""
