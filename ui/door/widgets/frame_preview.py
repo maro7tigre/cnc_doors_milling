@@ -169,9 +169,11 @@ class FramePreview(QWidget):
             painter.setPen(QPen(QColor(20, 120, 40), 1))
 
             lock_h_px = max(8, scale * 120)
-            lock_w_px = max(5, w * 0.6)
+            xi, wi = int(x), int(w)
+            lock_w_px = max(5, wi * 0.6)
             ly = y + (self.door_height - self.lock_x_position) * scale
-            center_x = x + self.lock_z_position * scale
+            frac = (self.lock_z_position / self.door_depth) if self.door_depth > 0 else 0.5
+            center_x = xi + frac * wi
 
             painter.drawRect(
                 int(center_x - lock_w_px / 2),
