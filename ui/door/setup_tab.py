@@ -476,6 +476,15 @@ class SetupTab(QWidget):
         count = self.hinge_count_spin.value()
         all_components = ["lock"] + [f"hinge{i+1}" for i in range(10)] + ["barrel"]
 
+        # Components whose profile type is not selected must be inactive — this is
+        # the authoritative sync point so the checkbox, dollar_variable, and preview
+        # never diverge (catches the startup case where defaults are non-zero).
+        for comp in all_components:
+            if comp not in force_inactive and not self._is_profile_active_for(comp):
+                force_inactive.add(comp)
+        # Don't force-activate a component for an unselected profile type
+        force_active_add = [c for c in force_active_add if c not in force_inactive]
+
         # Build current ordered list from existing numeric values (skip force_inactive)
         active_with_order = []
         for comp in all_components:
