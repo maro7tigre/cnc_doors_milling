@@ -753,12 +753,24 @@ class MainWindow(QMainWindow):
                     # Update dollar variables
                     self.dollar_variables.update(data["dollar_variables"])
 
-                    # Sync hidden ui_state from loaded active values
+                    # Sync hidden ui_state from loaded active values (capture intent before enforcing)
                     for i in range(10):
                         self.ui_state[f"hinge{i+1}_active_ui"] = bool(
                             self.dollar_variables.get(f"hinge{i+1}_active", 0))
                     self.ui_state["lock_active_ui"] = bool(self.dollar_variables.get("lock_active", 0))
                     self.ui_state["barrel_active_ui"] = bool(self.dollar_variables.get("barrel_active", 0))
+
+                    # Enforce consistency: *_active must be 0 when its profile is not selected.
+                    # Old projects / cross-device projects may have barrel_active=1 with
+                    # selected_barrel=None, which would leave barrel in the order widget
+                    # while its checkbox appears disabled/unchecked.
+                    if not self.dollar_variables.get("selected_barrel"):
+                        self.dollar_variables["barrel_active"] = 0
+                    if not self.dollar_variables.get("selected_lock"):
+                        self.dollar_variables["lock_active"] = 0
+                    if not self.dollar_variables.get("selected_hinge"):
+                        for i in range(10):
+                            self.dollar_variables[f"hinge{i+1}_active"] = 0
 
                     # Force frame tab to rebuild hinge UI based on loaded data
                     if hasattr(self.frame_tab, 'rebuild_door_widgets_from_variables'):
