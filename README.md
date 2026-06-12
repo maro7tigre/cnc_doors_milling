@@ -1,8 +1,6 @@
-# cnc_doors_milling
+# CNC Door Wizard
 
-> **Work in Progress** — This project is being adapted from [cnc_frames_milling](https://github.com/maro7tigre/cnc_frames_milling) (door frame milling) and repurposed specifically for doors. The codebase currently is still work in progress, and the README currently reflects the original frames project.
-
-A PySide6 application for generating CNC G-code files for **door** manufacturing. The application provides an intuitive interface for configuring door dimensions, selecting hinge and lock profiles, and generating customized G-code files with automatic variable replacement.
+A PySide6 desktop application for generating CNC G-code files for **door manufacturing**. Configure door dimensions, select hinge, lock, and barrel profiles, then generate customized right/left G-code files through an automatic two-pass variable replacement pipeline.
 
 ![License](https://img.shields.io/badge/license-GPLv3-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.8%2B-blue)
@@ -10,124 +8,235 @@ A PySide6 application for generating CNC G-code files for **door** manufacturing
 
 ## Features
 
-### 🎨 **Profile Management**
-- Create and manage reusable hinge and lock profiles
-- Define custom G-code templates with variable placeholders
-- Support for L-variables, custom variables, and system $ variables
-- Visual profile selection with image previews
-- Type-based organization system
+### Profile Management
 
-### 🔧 **Frame Configuration**
-- Interactive frame dimension setup
-- Automatic calculation of optimal component positions
+- Create and manage reusable hinge, lock, and barrel profiles
+- **Type-based organization**: each component has types (G-code template + L-variable definitions) and profiles (named instances with specific values)
+- Define custom G-code templates with L-variable and custom-variable placeholders
+- Visual profile selection with image previews and aspect-ratio-preserving scaling
+- Built-in profile editor dialog with type selector, variable editor, and image picker
+- Save/load portable profile sets — image paths stored relative to the profiles directory
+
+### Door Setup
+
+- Interactive door dimension setup (height, width, depth)
+- Support for up to 10 independently activatable hinges, each with manual or auto X position
+- Configure lock position (X/Z) and barrel position (X/Y) — manual or auto-calculated
+- Automatic calculation of optimal component positions:
+  - `hinge_z_auto` → `door_depth / 2`
+  - `hinge{n}_x_auto` → evenly distributed along door height
+  - `lock_x_auto` → `door_height / 2`, `lock_z_auto` → `door_depth / 2`
+  - `barrel_x_auto` follows `lock_x_position`, `barrel_y_auto` → `door_depth / 2`
 - Support for left/right door orientations
-- Real-time visual preview of frame layout
-- Configurable PM (mounting point) positions
-- Smart collision detection and validation
+- Real-time visual preview of door component layout
+- Draggable component order widget
 
-### 📝 **G-code Generation**
-- Automatic variable replacement in templates
-- Support for complex mathematical expressions in G-code
-- Batch generation for all frame components
-- Export to organized file structure
-- Real-time syntax highlighting with error detection
+### G-code Editor (LinuxCNC-Aware IDE)
 
-### 💾 **Project Management**
-- Save/load complete projects
-- Profile set management for reusable configurations
-- Auto-save current configuration
-- Import/export profile libraries
+- **Full LinuxCNC syntax highlighting** with semantically distinct colors per code group:
+  - G-codes: rapid (G0), linear (G1), arc (G2/G3), canned cycles, tool compensation, coordinate systems, modal codes
+  - M-codes: stop/end, spindle, coolant, tool change, I/O, overrides, save/restore, subprogram, user M-codes
+  - All 9 axes: X Y Z A B C U V W, plus arc offsets I J K and words F S T D H P Q N
+  - LinuxCNC parameters: `#5`, `#<name>`, `#[expr]`
+  - O-words: `o100 sub`, `call`, `if`, `while`, `repeat`, etc.
+  - Math functions: `ABS`, `SIN`, `SQRT`, `EXISTS`, `ATAN`, `LN` … (cyan-teal)
+  - Keyword operators: `AND`, `OR`, `MOD`, `EQ`, `LT` … (yellow)
+  - Both comment styles: `(…)` and `;`
+- **Template variable highlighting**: `{VAR:default}` in orange, valid `{$variable}` in green, unknown `{$variable}` in red with error background
+- **Line number gutter** with red highlight for error lines; click a flagged line number to show the error tooltip
+- **Current-line highlight** and **all-occurrences highlight** (select any word to see all matches)
+- **`?` help button** — opens a $-variable reference dialog; click any variable to insert it at the cursor
+- Auto-extraction of `{L1:default}` template variables from editor content
 
+### G-code Generation (Two-Pass Pipeline)
 
-## Preview
+1. **Pass 1** — profile G-codes (hinge, lock, barrel) are processed and injected as dollar variables: `{$hinges_gcode}`, `{$lock_gcode}`, `{$barrel_gcode}`
+1. **Pass 2** — right/left door G-code templates are processed using the complete `$variable` set, including the embedded sub-G-codes from Pass 1
+1. Automatic variable replacement in templates (L-variables, custom variables, $ variables)
+1. Output: exactly **two files** — `right_gcode` and `left_gcode`
+1. Sync-status highlighting shows when generated files are out of date relative to current settings
+1. Edit output files directly in the IDE before saving to disk
 
-![CNC Frames Milling Preview](preview/cnc%20frames%20milling.gif)
+### Variable System
+
+| Type | Syntax | Description |
+| --- | --- | --- |
+| L-variables | `{L1}`, `{L2:default}` | Profile dimension slots defined by the type |
+| Custom variables | `{var_name:default}` | User-defined parameters in a profile |
+| Dollar variables | `{$door_height}` | System variables (door dims, positions, orientation…) |
+| Sub-G-code embed | `{$hinges_gcode}` | Inject the full processed hinge/lock/barrel G-code block |
+
+### Project Management
+
+- Save/load complete projects (all `$variables` + generated G-codes) as `.json`
+- Auto-save current profile set on every change (`profiles/current.json`)
+- Save/load named profile set snapshots independently of projects
+- Window geometry and tab state persisted between sessions
 
 ## Installation
 
 ### Prerequisites
+
 - Python 3.8 or higher
-- pip package manager
 
 ### Setup
 
 1. Clone the repository:
-```bash
-git clone https://github.com/maro7tigre/cnc_frames_milling
-cd cnc-frame-wizard
-```
 
-2. Create a virtual environment (recommended):
-```bash
-python -m venv .venv
+   ```bash
+   git clone https://github.com/maro7tigre/cnc_doors_milling
+   cd cnc_doors_milling
+   ```
 
-# On Windows
-.venv\Scripts\activate
+1. Create a virtual environment (recommended):
 
-# On Linux/Mac
-source .venv/bin/activate
-```
+   ```bash
+   python -m venv .venv
 
-3. Install dependencies:
-```bash
-pip install PySide6
-```
+   # On Windows
+   .venv\Scripts\activate
+
+   # On Linux/Mac
+   source .venv/bin/activate
+   ```
+
+1. Install dependencies:
+
+   ```bash
+   pip install PySide6
+   ```
+
+1. Run the application:
+
+   ```bash
+   python main.py
+   ```
 
 ## Usage
 
-### Quick Start
+### Workflow
 
-1. **Profile Selection Tab**
-   - Create or select hinge and lock types
-   - Configure profiles with specific dimensions and G-code templates
-   - Select active profiles for your project
+1. **Profile Selection tab**
+   - Create hinge, lock, and barrel types with G-code templates and L-variable definitions
+   - Create profiles under each type with specific L-variable and custom-variable values
+   - Select one active profile per component category
+   - At least one profile must be selected before the Door Setup tab enables
 
-2. **Frame Setup Tab**
-   - Edit the right and left Gcode with references to the System variables.
-   - Enter frame dimensions (height, width, door width)
-   - Configure lock and hinge positions (manual or automatic)
-   - Preview door orientation (left/right)
-   - Adjust PM positions for optimal mounting
+1. **Door Setup tab**
+   - Enter door dimensions (height, width, depth)
+   - Enable/disable individual hinges and set their X positions (or use auto-distribution)
+   - Configure lock and barrel positions — manual or auto-calculated
+   - Choose left/right orientation
+   - Edit the right and left G-code templates in the IDE; embed component G-code blocks via `{$hinges_gcode}`, `{$lock_gcode}`, `{$barrel_gcode}`
 
-3. **Generate Files Tab**
-   - Review generated G-code files
-   - Edit files directly if needed
-   - Export to organized directory structure
+1. **Generate Files tab**
+   - Review the processed right/left G-code output with full syntax highlighting
+   - Edit directly if needed; sync indicator shows stale state
+   - Export both files to `~/CNC/Output/` (or a custom directory)
 
-### Variable System
+### Key Dollar Variables
 
-The application supports three types of variables:
+```text
+door_height, door_width, door_depth
+machine_x_offset, machine_y_offset, machine_z_offset
+hinge_z_position, hinge_z_auto, hinge_x_auto
+hinge{1-10}_active, hinge{1-10}_x_position, hinge{1-10}_x_auto
+lock_active, lock_x_position, lock_x_auto, lock_z_position, lock_z_auto
+barrel_active, barrel_x_position, barrel_x_auto, barrel_y_position, barrel_y_auto
+orientation
+hinges_gcode, lock_gcode, barrel_gcode   <- injected by Pass 1, embed with {$...}
+```
 
-- **L Variables**: `{L1}`, `{L2:default_value}` - Profile-specific dimensions
-- **Custom Variables**: `{custom_name:default}` - User-defined parameters
-- **$ Variables**: `{$frame_height}`, `{$lock_position}` - System variables
+## parameter_images — Context-Sensitive Parameter Previews
 
-## Configuration
+Drop image files into the `parameter_images/` directory named after any `$variable`.
+When a parameter field in the Door Setup tab receives focus, the app automatically looks
+up `parameter_images/<variable_name>.png` (or `.jpg` / `.jpeg`) and displays it in the
+preview panel. If no image exists for that variable the panel shows "No preview".
 
-### Theme Customization
+```text
+parameter_images/
+├── door_height.png         # shown when the door height field is focused
+├── door_width.png
+├── door_depth.png
+├── hinge1_x_position.png
+├── lock_x_position.png
+├── lock_z_position.png
+├── barrel_x_position.png
+├── barrel_y_position.png
+└── <any_dollar_variable>.png   # add more to cover any $ variable
+```
 
-Themes are defined in JSON files under the `themes/` directory. Each theme includes:
+## Directory Structure
 
-- **Color scheme** (`*_colors.json`): Define color palette
-- **QSS stylesheet** (`*_theme.qss`): Qt styling rules
-- **Control styles** (`control_styles.json`): Widget-specific styling
-- **Graph styles** (`graph_styles.json`): Visualization settings
+```text
+cnc_doors_milling/
+├── main.py
+├── theme_manager.py
+│
+├── parameter_images/       # Context-sensitive parameter preview images (see above)
+│
+├── profiles/
+│   ├── current.json        # Auto-saved active profile set (updated on every change)
+│   ├── saved/              # Named profile set snapshots saved by the user
+│   └── images/             # Profile and type preview images
+│
+├── projects/               # Full project saves ($ variables + generated G-codes)
+│
+├── preview/                # App screenshots / demo media
+│
+├── themes/
+│   ├── dark/               # dark_colors.json, dark_theme.qss, control_styles.json, graph_styles.json
+│   ├── light/              # light_colors.json, light_theme.qss, ...
+│   └── purple/             # purple_colors.json, purple_theme.qss, ... (default)
+│
+└── ui/
+    ├── main_window.py          # App root: EventManager, gcode pipeline, save/load
+    ├── profile/
+    │   ├── profile_tab.py      # Profile Selection tab
+    │   └── widgets/
+    │       ├── profile_grid.py     # Grid of profile cards per component category
+    │       ├── profile_item.py     # Single profile card with image preview
+    │       ├── type_item.py        # Single type card
+    │       └── type_selector.py    # Type picker used inside the profile editor
+    ├── door/
+    │   ├── setup_tab.py        # Door Setup tab (dimensions, hinges, lock, barrel)
+    │   └── widgets/
+    │       ├── frame_preview.py    # Real-time door layout visual preview
+    │       ├── order_widget.py     # Draggable component order widget
+    │       └── draggable_list.py   # Generic draggable list base
+    ├── generate/
+    │   ├── generate_tab.py     # Generate Files tab
+    │   └── widgets/
+    │       └── generated_file_item.py  # Right/left G-code output panels with sync status
+    ├── gcode_ide/
+    │   └── gcode_editor.py     # LinuxCNC-aware editor (syntax highlight, line numbers, help btn)
+    ├── dialogs/
+    │   ├── profile_editor.py       # New/edit profile dialog
+    │   ├── type_editor.py          # New/edit type dialog (G-code template + L-variable defs)
+    │   ├── gcode_dialog.py         # Standalone G-code viewer/editor dialog
+    │   ├── dollar_variables_dialog.py  # $ variable reference dialog (click to insert)
+    │   └── preview_dialog.py       # Full-size image preview dialog
+    └── widgets/
+        ├── themed_widgets.py           # Themed buttons, labels, inputs, splitters
+        ├── simple_widgets.py           # ClickableLabel, ScaledPreviewLabel, ErrorLineEdit
+        ├── variable_editor.py          # L-variable editor table
+        ├── custom_editor.py            # Custom-variable editor
+        └── dollar_variable_widgets.py  # $ variable display/edit widgets
+```
 
-### Default Directories
-
-The application uses the following default directories:
-- Profile sets: `profiles/saved/`
-- Projects: `projects/`
-- Output: `~/CNC/Output/`
+Output files are exported to `~/CNC/Output/` by default.
 
 ## License
 
-This project is licensed under the GNU General Public License v3.0
+This project is licensed under the GNU General Public License v3.0.
 
 ## Acknowledgments
 
-- Built with [PySide6](https://doc.qt.io/qtforpython/) - Qt for Python
+- Built with [PySide6](https://doc.qt.io/qtforpython/) — Qt for Python
+- Adapted from [cnc_frames_milling](https://github.com/maro7tigre/cnc_frames_milling)
+- Developed with [Claude](https://claude.ai) (Anthropic) — some parts vibe-coded and experimented with to see what sticks, other parts precisely directed with specific instructions and close supervision over changes
 
 ---
 
-**Note**: This software is provided as-is for CNC frame manufacturing automation. Always verify generated G-code before running on actual CNC equipment. The authors are not responsible for any damage resulting from the use of generated code.
+**Note**: Always verify generated G-code before running on actual CNC equipment. The authors are not responsible for any damage resulting from the use of generated code.
