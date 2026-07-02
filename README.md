@@ -6,6 +6,10 @@ A PySide6 desktop application for generating CNC G-code files for **door manufac
 ![Python](https://img.shields.io/badge/python-3.8%2B-blue)
 ![PySide6](https://img.shields.io/badge/PySide6-6.0%2B-green)
 
+## Preview
+
+![CNC Door Milling Preview](preview/cnc%20door%20milling.gif)
+
 ## Features
 
 ### Profile Management
@@ -23,13 +27,17 @@ A PySide6 desktop application for generating CNC G-code files for **door manufac
 - Support for up to 10 independently activatable hinges, each with manual or auto X position
 - Configure lock position (X/Z) and barrel position (X/Y) — manual or auto-calculated
 - Automatic calculation of optimal component positions:
-  - `hinge_z_auto` → `door_depth / 2`
-  - `hinge{n}_x_auto` → evenly distributed along door height
+  - `hinge_x_auto` → hinge X positions distributed along door height (special-cased spacing for 1-4 hinges, even spacing for 5-10)
   - `lock_x_auto` → `door_height / 2`, `lock_z_auto` → `door_depth / 2`
-  - `barrel_x_auto` follows `lock_x_position`, `barrel_y_auto` → `door_depth / 2`
+  - `barrel_x_auto` follows `lock_x_position`, `barrel_y_auto` keeps/defaults the barrel Y position
+  - Shared hinge Z position (`hinge_z_position`) is always set manually — no auto flag
 - Support for left/right door orientations
 - Real-time visual preview of door component layout
 - Draggable component order widget
+- **Spreadsheet import**: browse to an existing `.xlsx`/`.ods`/`.csv`/`.xls`/`.xlsm` file or create a fresh one from a built-in template (`door_height`, `door_width`, `door_depth`, `side`), pick a row from a merged/de-duplicated card list, and apply it directly to the matching `$variables`
+  - Auto-created spreadsheets open immediately in an in-app spreadsheet editor (add/remove columns, drag rows/columns, per-row context menu, dedicated G/D dropdown for the `side` column)
+  - Importing a value automatically disables the corresponding `*_auto` flag when one exists (e.g. importing `lock_x_position` clears `lock_x_auto` so it isn't silently overwritten by auto-calculation)
+  - Auto-created spreadsheets are bundled into the project folder on save and restored on load
 
 ### G-code Editor (LinuxCNC-Aware IDE)
 
@@ -69,6 +77,7 @@ A PySide6 desktop application for generating CNC G-code files for **door manufac
 ### Project Management
 
 - Save/load complete projects (all `$variables` + generated G-codes) as `.json`
+- Auto-created import spreadsheets are copied into the project folder and referenced from the project file on save
 - Auto-save current profile set on every change (`profiles/current.json`)
 - Save/load named profile set snapshots independently of projects
 - Window geometry and tab state persisted between sessions
@@ -123,7 +132,7 @@ A PySide6 desktop application for generating CNC G-code files for **door manufac
    - At least one profile must be selected before the Door Setup tab enables
 
 1. **Door Setup tab**
-   - Enter door dimensions (height, width, depth)
+   - Enter door dimensions (height, width, depth) manually, or import them from a spreadsheet (Browse an existing file or Create a new one, then Pick Row)
    - Enable/disable individual hinges and set their X positions (or use auto-distribution)
    - Configure lock and barrel positions — manual or auto-calculated
    - Choose left/right orientation
@@ -139,8 +148,8 @@ A PySide6 desktop application for generating CNC G-code files for **door manufac
 ```text
 door_height, door_width, door_depth
 machine_x_offset, machine_y_offset, machine_z_offset
-hinge_z_position, hinge_z_auto, hinge_x_auto
-hinge{1-10}_active, hinge{1-10}_x_position, hinge{1-10}_x_auto
+hinge_z_position, hinge_x_auto
+hinge{1-10}_active, hinge{1-10}_x_position
 lock_active, lock_x_position, lock_x_auto, lock_z_position, lock_z_auto
 barrel_active, barrel_x_position, barrel_x_auto, barrel_y_position, barrel_y_auto
 orientation
@@ -216,7 +225,8 @@ cnc_doors_milling/
     │   ├── type_editor.py          # New/edit type dialog (G-code template + L-variable defs)
     │   ├── gcode_dialog.py         # Standalone G-code viewer/editor dialog
     │   ├── dollar_variables_dialog.py  # $ variable reference dialog (click to insert)
-    │   └── preview_dialog.py       # Full-size image preview dialog
+    │   ├── preview_dialog.py       # Full-size image preview dialog
+    │   └── spreadsheet_picker_dialog.py  # Pick/edit rows from an imported spreadsheet
     └── widgets/
         ├── themed_widgets.py           # Themed buttons, labels, inputs, splitters
         ├── simple_widgets.py           # ClickableLabel, ScaledPreviewLabel, ErrorLineEdit
