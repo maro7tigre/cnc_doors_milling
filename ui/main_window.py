@@ -720,6 +720,12 @@ class MainWindow(QMainWindow):
                 "timestamp": datetime.now().isoformat()
             }
 
+            if hasattr(self.frame_tab, 'on_project_saved'):
+                ss_path = self.frame_tab.on_project_saved(filename)
+                if ss_path:
+                    data["spreadsheet_file"] = ss_path
+                    data["spreadsheet_last_row"] = self.frame_tab._spreadsheet_last_row
+
             with open(filename, 'w') as f:
                 json.dump(data, f, indent=2)
 
@@ -775,6 +781,9 @@ class MainWindow(QMainWindow):
                 if "generated_gcodes" in data:
                     self.generated_gcodes = data["generated_gcodes"]
                     self.events.emit_generated_updated()
+
+                if hasattr(self.frame_tab, 'on_project_loaded'):
+                    self.frame_tab.on_project_loaded(data)
 
                 QMessageBox.information(self, "Success", "Project loaded successfully!")
                 return True
