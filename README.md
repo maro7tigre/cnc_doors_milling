@@ -67,12 +67,17 @@ A PySide6 desktop application for generating CNC G-code files for **door manufac
 
 ### Variable System
 
-| Type | Syntax | Description |
-| --- | --- | --- |
-| L-variables | `{L1}`, `{L2:default}` | Profile dimension slots defined by the type |
-| Custom variables | `{var_name:default}` | User-defined parameters in a profile |
-| Dollar variables | `{$door_height}` | System variables (door dims, positions, orientation…) |
-| Sub-G-code embed | `{$hinges_gcode}` | Inject the full processed hinge/lock/barrel G-code block |
+There are two separate substitution namespaces, resolved in two different places:
+
+- **L-variables and custom variables** live inside a **type**'s G-code template (`{L1}`, `{L2:default}`, `{feed rate:1000}`...). Whichever placeholders you type into a type's template become that type's parameter list. When you create a **profile** under that type, the app scans the template for these placeholders and gives you one input field per placeholder (pre-filled with its `:default`, if any). Each activated hinge/lock/barrel uses whichever profile is currently selected for its category, and every `{L1}` / `{feed rate:1000}` occurrence in that type's template is replaced with the value stored on that profile. L-variables (`L1`, `L2`, ...) and custom variables (any name you choose) work identically — the only difference is L-variables are meant for the component's core dimensions and custom variables for anything else (feeds, offsets, tool counts...).
+- **Dollar variables** (`{$door_height}`, `{$lock_x_position}`, ...) are door-wide, not tied to any profile — one shared value per door, set in the Door Setup tab, available to every template.
+
+| Type | Syntax | Resolved from | Description |
+| --- | --- | --- | --- |
+| L-variables | `{L1}`, `{L2:default}` | The active profile's stored value | Component dimension slots defined by the type's template |
+| Custom variables | `{var_name:default}` | The active profile's stored value | User-named parameters defined by the type's template |
+| Dollar variables | `{$door_height}` | Door Setup tab | System variables shared by every template (door dims, positions, orientation…) |
+| Sub-G-code embed | `{$hinges_gcode}` | Pass 1 output | A special dollar variable: the selected hinge/lock/barrel profile's G-code, after its own L/custom variables have already been resolved |
 
 ### Project Management
 
@@ -156,6 +161,23 @@ orientation
 hinges_gcode, lock_gcode, barrel_gcode   <- injected by Pass 1, embed with {$...}
 ```
 
+## Example G-code Templates (LinuxCNC)
+
+`examples/linuxcnc/` contains a working set of starter templates for a LinuxCNC-based door router, meant as a reference for how the type/profile G-code and the `{$...}`/`{L1:default}` placeholders fit together in practice:
+
+```text
+examples/linuxcnc/
+├── Right Door G-Code.gcode   # top-level template — repeat/if block over hinge, lock, barrel order + tool-change subroutines
+├── Left Door G-Code.gcode    # mirrored version (opposite X sign)
+├── Hinge_concealed.gcode     # hinge type template
+├── Hinge_entrance.gcode      # hinge type template (alternate style)
+├── Lock_normal.gcode         # lock type template
+└── images/                   # matching profile preview thumbnails
+```
+
+> [!WARNING]
+> These files are shared purely as a starting point, not a plug-and-play solution. They were written for one specific machine and encode choices that are almost certainly wrong for yours: tool numbers (`T21`, `T22`, `T1`), spindle motor selects (`M3/M5 $0`, `$1`, `$2`), spindle speeds, feed rates, work offset (`G55`), and axis-sign/travel assumptions. Read through every line, cross-check it against your own tool table, spindle wiring, and machine limits, and confirm the resulting toolpath (dry run / air cut) before it ever touches material. You are responsible for verifying and adapting this code for your own machine — see the note at the bottom of this README.
+
 ## parameter_images — Context-Sensitive Parameter Previews
 
 Drop image files into the `parameter_images/` directory named after any `$variable`.
@@ -182,6 +204,9 @@ parameter_images/
 cnc_doors_milling/
 ├── main.py
 ├── theme_manager.py
+│
+├── examples/
+│   └── linuxcnc/           # Starter G-code templates for LinuxCNC (see below — adapt before use)
 │
 ├── parameter_images/       # Context-sensitive parameter preview images (see above)
 │
